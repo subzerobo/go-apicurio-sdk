@@ -42,7 +42,7 @@ func (api *ArtifactsAPI) SearchArtifacts(ctx context.Context, params *models.Sea
 		query = params.ToQuery().Encode()
 	}
 
-	url := fmt.Sprintf("%s/artifacts?%s", api.Client.BaseURL, query)
+	url := fmt.Sprintf("%s/search/artifacts?%s", api.Client.BaseURL, query)
 	resp, err := api.executeRequest(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, err
