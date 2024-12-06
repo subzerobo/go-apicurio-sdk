@@ -2,7 +2,6 @@ package apis_test
 
 import (
 	"context"
-	"fmt"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/subzerobo/go-apicurio-sdk/apis"
@@ -41,10 +40,9 @@ func cleanup(t *testing.T, artifactsAPI *apis.ArtifactsAPI) {
 	}
 }
 
-func TestArtifactsAPI(t *testing.T) {
-
+func TestArtifactsAPIIntegration(t *testing.T) {
 	if testing.Short() {
-		t.Skip("skipping test in short mode.")
+		t.Skip("skipping integration test")
 	}
 
 	artifactsAPI := setupClient()
@@ -79,7 +77,6 @@ func TestArtifactsAPI(t *testing.T) {
 			Name: artifactID,
 		}
 		resp, err := artifactsAPI.SearchArtifacts(ctx, params)
-		fmt.Println(err)
 		assert.NoError(t, err)
 		assert.GreaterOrEqual(t, len(resp.Artifacts), 1)
 	})
