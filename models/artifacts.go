@@ -256,7 +256,7 @@ type Artifact struct {
 	Content      string            `json:"content"`
 }
 
-type ArtifactResponse struct {
+type ArtifactDetail struct {
 	GroupID     string            `json:"groupId"`
 	ArtifactID  string            `json:"artifactId"`
 	Name        string            `json:"name"`
@@ -266,6 +266,10 @@ type ArtifactResponse struct {
 	ModifiedOn  string            `json:"modifiedOn"`
 	ContentID   int64             `json:"contentId"`
 	Labels      map[string]string `json:"labels"`
+}
+
+type ArtifactResponse struct {
+	Artifact ArtifactDetail `json:"artifact"`
 }
 
 type CreateArtifactParams struct {

@@ -123,7 +123,7 @@ func handleResponse(resp *http.Response, expectedStatus int, result interface{})
 		}
 		return apiError
 	}
-
+	
 	if result != nil && resp.StatusCode == expectedStatus {
 		if err := json.NewDecoder(resp.Body).Decode(result); err != nil {
 			return errors.Wrap(err, "failed to parse response body")

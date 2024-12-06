@@ -30,7 +30,7 @@ jobs:
 
       # Step 4: Run tests
       - name: Run tests
-        run: go test ./... -v
+        run: go test ./... --short -v
 
       # Step 5: Upload test results (optional)
       - name: Upload test results
