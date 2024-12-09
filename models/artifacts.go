@@ -21,31 +21,31 @@ const (
 )
 
 type SearchedArtifact struct {
-	GroupId      string `json:"groupId"`
-	ArtifactId   string `json:"artifactId"`
-	Name         string `json:"name"`
-	Description  string `json:"description"`
-	ArtifactType string `json:"artifactType"`
-	Owner        string `json:"owner"`
-	CreatedOn    string `json:"createdOn"`
-	ModifiedBy   string `json:"modifiedBy"`
-	ModifiedOn   string `json:"modifiedOn"`
+	GroupId      string       `json:"groupId"`
+	ArtifactId   string       `json:"artifactId"`
+	Name         string       `json:"name"`
+	Description  string       `json:"description"`
+	ArtifactType ArtifactType `json:"artifactType"`
+	Owner        string       `json:"owner"`
+	CreatedOn    string       `json:"createdOn"`
+	ModifiedBy   string       `json:"modifiedBy"`
+	ModifiedOn   string       `json:"modifiedOn"`
 }
 
 // SearchArtifactsParams represents the optional parameters for searching artifacts.
 type SearchArtifactsParams struct {
-	Name         string   // Filter by artifact name
-	Offset       int      // Default: 0
-	Limit        int      // Default: 20
-	Order        string   // Default: "asc", Enum: "asc", "desc"
-	OrderBy      string   // Field to sort by, e.g., "name", "createdOn"
-	Labels       []string // Filter by one or more name/value labels
-	Description  string   // Filter by description
-	GroupID      string   // Filter by artifact group
-	GlobalID     int64    // Filter by globalId
-	ContentID    int64    // Filter by contentId
-	ArtifactID   string   // Filter by artifactId
-	ArtifactType string   // Filter by artifact type (e.g., AVRO, JSON)
+	Name         string       // Filter by artifact name
+	Offset       int          // Default: 0
+	Limit        int          // Default: 20
+	Order        string       // Default: "asc", Enum: "asc", "desc"
+	OrderBy      string       // Field to sort by, e.g., "name", "createdOn"
+	Labels       []string     // Filter by one or more name/value labels
+	Description  string       // Filter by description
+	GroupID      string       // Filter by artifact group
+	GlobalID     int64        // Filter by globalId
+	ContentID    int64        // Filter by contentId
+	ArtifactID   string       // Filter by artifactId
+	ArtifactType ArtifactType // Filter by artifact type (e.g., AVRO, JSON)
 }
 
 // ToQuery converts the SearchArtifactsParams struct to URL query parameters.
@@ -86,7 +86,7 @@ func (p *SearchArtifactsParams) ToQuery() url.Values {
 		query.Set("artifactId", p.ArtifactID)
 	}
 	if p.ArtifactType != "" {
-		query.Set("artifactType", p.ArtifactType)
+		query.Set("artifactType", string(p.ArtifactType))
 	}
 
 	return query
@@ -246,16 +246,7 @@ type ArtifactContent struct {
 	ArtifactType ArtifactType `json:"artifactType"`
 }
 
-// Artifact represents the artifact metadata and content.
-type Artifact struct {
-	ArtifactID   string            `json:"artifactId,omitempty"`
-	ArtifactType string            `json:"artifactType"`
-	Name         string            `json:"name,omitempty"`
-	Description  string            `json:"description,omitempty"`
-	Labels       map[string]string `json:"labels,omitempty"`
-	Content      string            `json:"content"`
-}
-
+// ArtifactDetail represents the detailed information about an artifact.
 type ArtifactDetail struct {
 	GroupID     string            `json:"groupId"`
 	ArtifactID  string            `json:"artifactId"`
@@ -268,7 +259,7 @@ type ArtifactDetail struct {
 	Labels      map[string]string `json:"labels"`
 }
 
-type ArtifactResponse struct {
+type CreateArtifactResponse struct {
 	Artifact ArtifactDetail `json:"artifact"`
 }
 
@@ -290,5 +281,32 @@ func (p CreateArtifactParams) ToQuery() string {
 	if p.DryRun {
 		query += "dryRun=true&"
 	}
-	return strings.TrimSuffix(query, "&") // Remove trailing "&"
+	return strings.TrimSuffix(query, "&")
+}
+
+// CreateArtifactRequest represents the request to create an artifact.
+type CreateArtifactRequest struct {
+	ArtifactID   string               `json:"artifactId,omitempty"`
+	ArtifactType ArtifactType         `json:"artifactType"`
+	Name         string               `json:"name,omitempty"`
+	Description  string               `json:"description,omitempty"`
+	Labels       map[string]string    `json:"labels,omitempty"`
+	FirstVersion CreateVersionRequest `json:"firstVersion,omitempty"`
+}
+
+// CreateVersionRequest represents the request to create a version for an artifact.
+type CreateVersionRequest struct {
+	Version     string               `json:"version"`
+	Content     CreateContentRequest `json:"content"`
+	Name        string               `json:"name,omitempty"`
+	Description string               `json:"description,omitempty"`
+	Labels      map[string]string    `json:"labels,omitempty"`
+	Branches    []string             `json:"branches,omitempty"`
+	IsDraft     bool                 `json:"isDraft"`
+}
+
+// CreateContentRequest represents the content of an artifact.
+type CreateContentRequest struct {
+	Content     string `json:"content"`
+	ContentType string `json:"contentType"`
 }

@@ -42,7 +42,7 @@ func (api *MetadataAPI) GetArtifactVersionMetadata(ctx context.Context, groupId,
 
 // UpdateArtifactVersionMetadata updates the user-editable metadata of an artifact version.
 func (api *MetadataAPI) UpdateArtifactVersionMetadata(ctx context.Context, groupId, artifactId, versionExpression string, metadata models.UpdateArtifactMetadataRequest) error {
-	url := fmt.Sprintf("%s/groups/%s/artifacts/%s", api.Client.BaseURL, groupId, artifactId)
+	url := fmt.Sprintf("%s/groups/%s/artifacts/%s/versions/%s", api.Client.BaseURL, groupId, artifactId, versionExpression)
 
 	resp, err := api.executeRequest(ctx, http.MethodPut, url, metadata)
 	if err != nil {
@@ -123,7 +123,7 @@ func handleResponse(resp *http.Response, expectedStatus int, result interface{})
 		}
 		return apiError
 	}
-	
+
 	if result != nil && resp.StatusCode == expectedStatus {
 		if err := json.NewDecoder(resp.Body).Decode(result); err != nil {
 			return errors.Wrap(err, "failed to parse response body")
