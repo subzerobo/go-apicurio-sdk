@@ -17,17 +17,15 @@ type ArtifactsAPI struct {
 	Client *client.Client
 }
 
-func NewArtifactsAPI(client client.Client) *ArtifactsAPI {
+func NewArtifactsAPI(client *client.Client) *ArtifactsAPI {
 	return &ArtifactsAPI{
-		Client: &client,
+		Client: client,
 	}
 }
 
 var (
 	ErrArtifactNotFound = errors.New("artifact not found")
-	ErrUnexpectedError  = errors.New("unexpected server error")
 	ErrMethodNotAllowed = errors.New("method not allowed or disabled on the server")
-	ErrConflict         = errors.New("artifact conflicts with existing data")
 	ErrInvalidInput     = errors.New("input must be between 1 and 512 characters")
 
 	regexValidation = regexp.MustCompile(`^.{1,512}$`)
@@ -285,7 +283,7 @@ func (api *ArtifactsAPI) DeleteArtifact(ctx context.Context, groupID, artifactId
 
 // CreateArtifact Creates a new artifact.
 // See: https://www.apicur.io/registry/docs/apicurio-registry/3.0.x/assets-attachments/registry-rest-api.htm#tag/Artifacts/operation/createArtifact
-func (api *ArtifactsAPI) CreateArtifact(ctx context.Context, groupId string, artifact models.Artifact, params models.CreateArtifactParams) (*models.ArtifactResponse, error) {
+func (api *ArtifactsAPI) CreateArtifact(ctx context.Context, groupId string, artifact models.CreateArtifactRequest, params models.CreateArtifactParams) (*models.CreateArtifactResponse, error) {
 	if err := validateInput(groupId, "Group ID"); err != nil {
 		return nil, err
 	}
@@ -297,7 +295,7 @@ func (api *ArtifactsAPI) CreateArtifact(ctx context.Context, groupId string, art
 		return nil, err
 	}
 
-	var response models.ArtifactResponse
+	var response models.CreateArtifactResponse
 	if err := handleResponse(resp, http.StatusOK, &response); err != nil {
 		return nil, err
 	}
