@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/stretchr/testify/assert"
 	"github.com/subzerobo/go-apicurio-sdk/apis"
 	"github.com/subzerobo/go-apicurio-sdk/client"
@@ -12,6 +13,16 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
+)
+
+const (
+	version        = "1.0.0"
+	newVersion     = "1.1.0"
+	commentID      = "test-comment"
+	stubContent    = `{"type":"record","name":"TestRecord","fields":[{"name":"field1","type":"string"}]}`
+	stubNewContent = `{"type":"record","name":"TestRecord","fields":[{"name":"field1","type":"string"},{"name":"field2","type":"string"}]}`
+	stubReference  = `{"groupId":"test-group","artifactId":"ref-artifact","version":"1.0.0"}`
 )
 
 func setupVersionAPIClient() *apis.ArtifactsAPI {
@@ -1513,4 +1524,244 @@ func TestVersionsAPI_UpdateArtifactVersionState(t *testing.T) {
 		assert.Equal(t, 500, apiErr.Status)
 		assert.Equal(t, "Internal server error", apiErr.Title)
 	})
+}
+
+/***********************/
+/***** Integration *****/
+/***********************/
+
+func setupVersionsAPIClient() *apis.VersionsAPI {
+	apiClient := setupHTTPClient()
+	return apis.NewVersionsAPI(apiClient)
+}
+
+func TestVersionsAPIIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test")
+	}
+
+	ctx := context.Background()
+
+	versionsAPI := setupVersionsAPIClient()
+
+	// Prepare test data
+	artifactsAPI := apis.NewArtifactsAPI(versionsAPI.Client)
+
+	// Clean up before and after tests
+	t.Cleanup(func() { cleanup(t, artifactsAPI) })
+	cleanup(t, artifactsAPI)
+
+	// Test CreateArtifactVersion
+	t.Run("CreateArtifactVersion", func(t *testing.T) {
+		generatedArtifactID, err := generateArtifactForTest(ctx, artifactsAPI)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		request := &models.CreateVersionRequest{
+			Version: newVersion,
+			Content: models.CreateContentRequest{
+				Content: stubNewContent,
+			},
+		}
+
+		resp, err := versionsAPI.CreateArtifactVersion(ctx, groupID, generatedArtifactID, request, false)
+		assert.NoError(t, err)
+		assert.Equal(t, newVersion, resp.Version)
+	})
+
+	// Test ListArtifactVersions
+	t.Run("ListArtifactVersions", func(t *testing.T) {
+		generatedArtifactID, err := generateArtifactForTest(ctx, artifactsAPI)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		params := &models.ListArtifactsInGroupParams{}
+		resp, err := versionsAPI.ListArtifactVersions(ctx, groupID, generatedArtifactID, params)
+		assert.NoError(t, err)
+		assert.GreaterOrEqual(t, len(*resp), 1)
+	})
+
+	// Test GetArtifactVersionReferences
+	t.Run("GetArtifactVersionReferences", func(t *testing.T) {
+		generatedArtifactID, err := generateArtifactForTest(ctx, artifactsAPI)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		params := &models.ArtifactVersionReferencesParams{}
+		references, err := versionsAPI.GetArtifactVersionReferences(ctx, groupID, generatedArtifactID, version, params)
+		assert.NoError(t, err)
+		assert.NotNil(t, references)
+	})
+
+	// Test AddArtifactVersionComment
+	t.Run("AddArtifactVersionComment", func(t *testing.T) {
+		generatedArtifactID, err := generateArtifactForTest(ctx, artifactsAPI)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		comment, err := versionsAPI.AddArtifactVersionComment(ctx, groupID, generatedArtifactID, version, "Test comment")
+		assert.NoError(t, err)
+		assert.Equal(t, "Test comment", comment.Value)
+	})
+
+	// Test GetArtifactVersionComments
+	t.Run("GetArtifactVersionComments", func(t *testing.T) {
+		generatedArtifactID, err := generateArtifactForTest(ctx, artifactsAPI)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		// Add a comment first
+		comment, err := versionsAPI.AddArtifactVersionComment(ctx, groupID, generatedArtifactID, version, "Test comment")
+		assert.NoError(t, err)
+		assert.Equal(t, "Test comment", comment.Value)
+
+		// Get comments
+		comments, err := versionsAPI.GetArtifactVersionComments(ctx, groupID, generatedArtifactID, version)
+		assert.NoError(t, err)
+		assert.NotNil(t, comments)
+	})
+
+	// Test UpdateArtifactVersionComment
+	t.Run("UpdateArtifactVersionComment", func(t *testing.T) {
+		generatedArtifactID, err := generateArtifactForTest(ctx, artifactsAPI)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		// Add a comment first
+		comment, err := versionsAPI.AddArtifactVersionComment(ctx, groupID, generatedArtifactID, version, "Initial comment")
+		assert.NoError(t, err)
+
+		// Update the comment
+		err = versionsAPI.UpdateArtifactVersionComment(ctx, groupID, generatedArtifactID, version, comment.CommentID, "Updated comment")
+		assert.NoError(t, err)
+	})
+
+	// Test DeleteArtifactVersionComment
+	t.Run("DeleteArtifactVersionComment", func(t *testing.T) {
+		generatedArtifactID, err := generateArtifactForTest(ctx, artifactsAPI)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		// Add a comment first
+		comment, err := versionsAPI.AddArtifactVersionComment(ctx, groupID, generatedArtifactID, version, "Temporary comment")
+		assert.NoError(t, err)
+
+		// Delete the comment
+		err = versionsAPI.DeleteArtifactVersionComment(ctx, groupID, generatedArtifactID, version, comment.CommentID)
+		assert.NoError(t, err)
+	})
+
+	// Test DeleteArtifactVersion
+	t.Run("DeleteArtifactVersion", func(t *testing.T) {
+		generatedArtifactID, err := generateArtifactForTest(ctx, artifactsAPI)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		err = versionsAPI.DeleteArtifactVersion(ctx, groupID, generatedArtifactID, version)
+		assert.NoError(t, err)
+	})
+
+	// Test GetArtifactVersionContent
+	t.Run("GetArtifactVersionContent", func(t *testing.T) {
+		generatedArtifactID, err := generateArtifactForTest(ctx, artifactsAPI)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		params := &models.ArtifactReferenceParams{}
+		content, err := versionsAPI.GetArtifactVersionContent(ctx, groupID, generatedArtifactID, version, params)
+		assert.NoError(t, err)
+		assert.NotNil(t, content)
+	})
+
+	// Test UpdateArtifactVersionContent
+	t.Run("UpdateArtifactVersionContent", func(t *testing.T) {
+		generatedArtifactID, err := generateArtifactForTest(ctx, artifactsAPI)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		content := &models.CreateContentRequest{
+			Content: stubContent,
+		}
+		err = versionsAPI.UpdateArtifactVersionContent(ctx, groupID, generatedArtifactID, version, content)
+		assert.NoError(t, err)
+	})
+
+	// Test SearchForArtifactVersions
+	t.Run("SearchForArtifactVersions", func(t *testing.T) {
+		_, err := generateArtifactForTest(ctx, artifactsAPI)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		params := &models.SearchVersionParams{
+			Version: version,
+		}
+		versions, err := versionsAPI.SearchForArtifactVersions(ctx, params)
+		assert.NoError(t, err)
+		assert.GreaterOrEqual(t, len(*versions), 1)
+	})
+
+	// Test GetArtifactVersionState
+	t.Run("GetArtifactVersionState", func(t *testing.T) {
+		generatedArtifactID, err := generateArtifactForTest(ctx, artifactsAPI)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		state, err := versionsAPI.GetArtifactVersionState(ctx, groupID, generatedArtifactID, version)
+		assert.NoError(t, err)
+		assert.Equal(t, models.StateDraft, *state)
+	})
+
+	// Test UpdateArtifactVersionState
+	t.Run("UpdateArtifactVersionState", func(t *testing.T) {
+		generatedArtifactID, err := generateArtifactForTest(ctx, artifactsAPI)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		err = versionsAPI.UpdateArtifactVersionState(ctx, groupID, generatedArtifactID, version, models.StateDeprecated, false)
+		assert.NoError(t, err)
+	})
+}
+
+func generateArtifactForTest(ctx context.Context, artifactsAPI *apis.ArtifactsAPI) (string, error) {
+	// Helper to generate unique artifact IDs
+	generateArtifactID := func(prefix string) string {
+		return fmt.Sprintf("%s-%d", prefix, time.Now().UnixNano())
+	}
+
+	newArtifactID := generateArtifactID("test-artifact")
+
+	artifact := models.CreateArtifactRequest{
+		ArtifactID:   newArtifactID,
+		ArtifactType: models.Json,
+		Name:         newArtifactID,
+		FirstVersion: models.CreateVersionRequest{
+			Version: "1.0.0",
+			Content: models.CreateContentRequest{
+				Content:     stubArtifactContent,
+				ContentType: "application/json",
+			},
+			IsDraft: true,
+		},
+	}
+	createParams := &models.CreateArtifactParams{
+		IfExists: models.IfExistsFail,
+	}
+	_, err := artifactsAPI.CreateArtifact(ctx, groupID, artifact, createParams)
+	if err != nil {
+		return "", err
+	}
+	return newArtifactID, nil
 }

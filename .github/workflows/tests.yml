@@ -50,6 +50,7 @@ jobs:
         ports:
           - 9080:8080
         options: >-
+          --env APICURIO_REST_MUTABILITY_ARTIFACT_VERSION_CONTENT_ENABLED=true
           --env APICURIO_REST_DELETION_ARTIFACT_ENABLED=true
           --env APICURIO_REST_DELETION_ARTIFACT_VERSION_ENABLED=true
           --env APICURIO_REST_DELETION_GROUP_ENABLED=true
