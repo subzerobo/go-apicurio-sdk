@@ -10,7 +10,6 @@ import (
 	"github.com/subzerobo/go-apicurio-sdk/models"
 	"io"
 	"net/http"
-	"regexp"
 )
 
 type ArtifactsAPI struct {
@@ -27,55 +26,53 @@ var (
 	ErrArtifactNotFound = errors.New("artifact not found")
 	ErrMethodNotAllowed = errors.New("method not allowed or disabled on the server")
 	ErrInvalidInput     = errors.New("input must be between 1 and 512 characters")
-
-	regexValidation = regexp.MustCompile(`^.{1,512}$`)
 )
 
 // SearchArtifacts - Search for artifacts using the given filter parameters.
 // Search for artifacts using the given filter parameters.
 // See:
-func (api *ArtifactsAPI) SearchArtifacts(ctx context.Context, params *models.SearchArtifactsParams) (*models.SearchArtifactsResponse, error) {
+func (api *ArtifactsAPI) SearchArtifacts(ctx context.Context, params *models.SearchArtifactsParams) (*[]models.SearchedArtifact, error) {
 	query := ""
 	if params != nil {
-		query = params.ToQuery().Encode()
+		query = "?" + params.ToQuery().Encode()
 	}
 
-	url := fmt.Sprintf("%s/search/artifacts?%s", api.Client.BaseURL, query)
+	url := fmt.Sprintf("%s/search/artifacts%s", api.Client.BaseURL, query)
 	resp, err := api.executeRequest(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	var result models.SearchArtifactsResponse
+	var result models.SearchArtifactsAPIResponse
 	if err := handleResponse(resp, http.StatusOK, &result); err != nil {
 		return nil, err
 	}
 
-	return &result, nil
+	return &result.Artifacts, nil
 }
 
 // SearchArtifactsByContent searches for artifacts that match the provided content.
 // Returns a paginated list of all artifacts with at least one version that matches the posted content.
 // See: https://www.apicur.io/registry/docs/apicurio-registry/3.0.x/assets-attachments/registry-rest-api.htm#tag/Artifacts/operation/searchArtifactsByContent
-func (api *ArtifactsAPI) SearchArtifactsByContent(ctx context.Context, content []byte, params *models.SearchArtifactsByContentParams) (*models.SearchArtifactsResponse, error) {
+func (api *ArtifactsAPI) SearchArtifactsByContent(ctx context.Context, content []byte, params *models.SearchArtifactsByContentParams) (*[]models.SearchedArtifact, error) {
 	// Convert params to query string
 	query := ""
 	if params != nil {
-		query = params.ToQuery().Encode()
+		query = "?" + params.ToQuery().Encode()
 	}
 
-	url := fmt.Sprintf("%s/search/artifacts?%s", api.Client.BaseURL, query)
+	url := fmt.Sprintf("%s/search/artifacts%s", api.Client.BaseURL, query)
 	resp, err := api.executeRequest(ctx, http.MethodPost, url, content)
 	if err != nil {
 		return nil, err
 	}
 
-	var result models.SearchArtifactsResponse
+	var result models.SearchArtifactsAPIResponse
 	if err := handleResponse(resp, http.StatusOK, &result); err != nil {
 		return nil, err
 	}
 
-	return &result, nil
+	return &result.Artifacts, nil
 }
 
 // ListArtifactReferences Returns a list containing all the artifact references using the artifact content ID.
@@ -100,7 +97,7 @@ func (api *ArtifactsAPI) ListArtifactReferences(ctx context.Context, contentID i
 func (api *ArtifactsAPI) ListArtifactReferencesByGlobalID(ctx context.Context, globalID int64, params *models.ListArtifactReferencesByGlobalIDParams) (*[]models.ArtifactReference, error) {
 	query := ""
 	if params != nil {
-		query = params.ToQuery()
+		query = "?" + params.ToQuery().Encode()
 	}
 
 	url := fmt.Sprintf("%s/ids/globalIds/%d/references%s", api.Client.BaseURL, globalID, query)
@@ -137,13 +134,13 @@ func (api *ArtifactsAPI) ListArtifactReferencesByHash(ctx context.Context, conte
 // ListArtifactsInGroup lists all artifacts in a specified group.
 // See: https://www.apicur.io/registry/docs/apicurio-registry/3.0.x/assets-attachments/registry-rest-api.htm#tag/Artifacts/operation/referencesByContentHash
 func (api *ArtifactsAPI) ListArtifactsInGroup(ctx context.Context, groupID string, params *models.ListArtifactsInGroupParams) (*models.ListArtifactsResponse, error) {
-	if err := validateInput(groupID, "Group ID"); err != nil {
+	if err := validateInput(groupID, regexGroupIDArtifactID, "Group ID"); err != nil {
 		return nil, err
 	}
 
 	query := ""
 	if params != nil {
-		query = params.ToQuery()
+		query = "?" + params.ToQuery().Encode()
 	}
 
 	url := fmt.Sprintf("%s/groups/%s/artifacts%s", api.Client.BaseURL, groupID, query)
@@ -244,7 +241,7 @@ func (api *ArtifactsAPI) GetArtifactContentByID(ctx context.Context, contentID i
 // Deletes all the artifacts that exist in a given group.
 // See: https://www.apicur.io/registry/docs/apicurio-registry/3.0.x/assets-attachments/registry-rest-api.htm#tag/Artifacts/operation/deleteArtifactsInGroup
 func (api *ArtifactsAPI) DeleteArtifactsInGroup(ctx context.Context, groupID string) error {
-	if err := validateInput(groupID, "Group ID"); err != nil {
+	if err := validateInput(groupID, regexGroupIDArtifactID, "Group ID"); err != nil {
 		return err
 	}
 
@@ -261,10 +258,10 @@ func (api *ArtifactsAPI) DeleteArtifactsInGroup(ctx context.Context, groupID str
 // Deletes an artifact completely, resulting in all versions of the artifact also being deleted. This may fail for one of the following reasons:
 // See: https://www.apicur.io/registry/docs/apicurio-registry/3.0.x/assets-attachments/registry-rest-api.htm#tag/Artifacts/operation/deleteArtifact
 func (api *ArtifactsAPI) DeleteArtifact(ctx context.Context, groupID, artifactId string) error {
-	if err := validateInput(groupID, "Group ID"); err != nil {
+	if err := validateInput(groupID, regexGroupIDArtifactID, "Group ID"); err != nil {
 		return err
 	}
-	if err := validateInput(artifactId, "Artifact ID"); err != nil {
+	if err := validateInput(artifactId, regexGroupIDArtifactID, "Artifact ID"); err != nil {
 		return err
 	}
 
@@ -283,13 +280,17 @@ func (api *ArtifactsAPI) DeleteArtifact(ctx context.Context, groupID, artifactId
 
 // CreateArtifact Creates a new artifact.
 // See: https://www.apicur.io/registry/docs/apicurio-registry/3.0.x/assets-attachments/registry-rest-api.htm#tag/Artifacts/operation/createArtifact
-func (api *ArtifactsAPI) CreateArtifact(ctx context.Context, groupId string, artifact models.CreateArtifactRequest, params models.CreateArtifactParams) (*models.CreateArtifactResponse, error) {
-	if err := validateInput(groupId, "Group ID"); err != nil {
+func (api *ArtifactsAPI) CreateArtifact(ctx context.Context, groupId string, artifact models.CreateArtifactRequest, params *models.CreateArtifactParams) (*models.ArtifactDetail, error) {
+	if err := validateInput(groupId, regexGroupIDArtifactID, "Group ID"); err != nil {
 		return nil, err
 	}
 
-	query := params.ToQuery()
+	query := ""
+	if params != nil {
+		query = "?" + params.ToQuery().Encode()
+	}
 	url := fmt.Sprintf("%s/groups/%s/artifacts%s", api.Client.BaseURL, groupId, query)
+
 	resp, err := api.executeRequest(ctx, http.MethodPost, url, artifact)
 	if err != nil {
 		return nil, err
@@ -300,65 +301,46 @@ func (api *ArtifactsAPI) CreateArtifact(ctx context.Context, groupId string, art
 		return nil, err
 	}
 
-	return &response, nil
-}
-
-func validateInput(input, name string) error {
-	if match := regexValidation.MatchString(input); !match {
-		return errors.Wrapf(ErrInvalidInput, "%s: %s", name, input)
-	}
-	return nil
-}
-
-// parseAPIError parses an API error response and returns an APIError struct.
-func parseAPIError(resp *http.Response) (*models.APIError, error) {
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read error response body: %w", err)
-	}
-
-	var apiError models.APIError
-	if err := json.Unmarshal(body, &apiError); err != nil {
-		return nil, fmt.Errorf("failed to parse error response: %w", err)
-	}
-
-	return &apiError, nil
+	return &response.Artifact, nil
 }
 
 // executeRequest handles the creation and execution of an HTTP request.
 func (api *ArtifactsAPI) executeRequest(ctx context.Context, method, url string, body interface{}) (*http.Response, error) {
 	var reqBody []byte
 	var err error
+	contentType := "*/*"
 
-	if body != nil {
+	switch v := body.(type) {
+	case string:
+		reqBody = []byte(v)
+		contentType = "*/*"
+	case []byte:
+		reqBody = v
+		contentType = "*/*"
+	default:
+		contentType = "application/json"
 		reqBody, err = json.Marshal(body)
 		if err != nil {
-			return nil, errors.Wrap(err, "failed to marshal request body")
+			return nil, errors.Wrap(err, "failed to marshal request body as JSON")
 		}
 	}
 
+	// Create the HTTP request
 	req, err := http.NewRequestWithContext(ctx, method, url, bytes.NewReader(reqBody))
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create HTTP request")
 	}
 
+	// Set appropriate Content-Type header
 	if body != nil {
-		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Content-Type", contentType)
 	}
 
+	// Execute the request
 	resp, err := api.Client.Do(req)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to execute HTTP request")
 	}
 
 	return resp, nil
-}
-
-func parseArtifactTypeHeader(resp *http.Response) (models.ArtifactType, error) {
-	artifactTypeHeader := resp.Header.Get("X-Registry-ArtifactType")
-	artifactType, err := models.ParseArtifactType(artifactTypeHeader)
-	if err != nil {
-		return "", errors.Wrapf(err, "invalid artifact type in response header: %s", artifactTypeHeader)
-	}
-	return artifactType, nil
 }

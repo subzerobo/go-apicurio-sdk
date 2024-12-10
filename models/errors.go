@@ -2,6 +2,10 @@ package models
 
 import "fmt"
 
+var (
+	ErrUnknownArtifactType = fmt.Errorf("unknown artifact type")
+)
+
 // APIError represents the structure of an error response from the API.
 type APIError struct {
 	Detail   string `json:"detail"`   // A human-readable explanation specific to the problem

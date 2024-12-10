@@ -54,7 +54,7 @@ func cleanup(t *testing.T, artifactsAPI *apis.ArtifactsAPI) {
 
 func TestSearchArtifacts(t *testing.T) {
 	t.Run("Success", func(t *testing.T) {
-		mockResponse := models.SearchArtifactsResponse{
+		mockResponse := models.SearchArtifactsAPIResponse{
 			Artifacts: []models.SearchedArtifact{
 				{GroupId: "test-group", ArtifactId: "artifact-1", Name: "Test Artifact"},
 			},
@@ -65,7 +65,8 @@ func TestSearchArtifacts(t *testing.T) {
 			assert.Equal(t, http.MethodGet, r.Method)
 
 			w.WriteHeader(http.StatusOK)
-			json.NewEncoder(w).Encode(mockResponse)
+			err := json.NewEncoder(w).Encode(mockResponse)
+			assert.NoError(t, err)
 		}))
 		defer server.Close()
 
@@ -76,7 +77,6 @@ func TestSearchArtifacts(t *testing.T) {
 		result, err := api.SearchArtifacts(context.Background(), params)
 		assert.NoError(t, err)
 		assert.NotNil(t, result)
-		assert.Equal(t, 1, result.Count)
 	})
 
 	t.Run("Server Error", func(t *testing.T) {
@@ -97,7 +97,7 @@ func TestSearchArtifacts(t *testing.T) {
 
 func TestSearchArtifactsByContent(t *testing.T) {
 	t.Run("Success", func(t *testing.T) {
-		mockResponse := models.SearchArtifactsResponse{
+		mockResponse := models.SearchArtifactsAPIResponse{
 			Artifacts: []models.SearchedArtifact{
 				{GroupId: "test-group", ArtifactId: "artifact-1", Name: "Test Artifact"},
 			},
@@ -108,7 +108,8 @@ func TestSearchArtifactsByContent(t *testing.T) {
 			assert.Equal(t, http.MethodPost, r.Method)
 
 			w.WriteHeader(http.StatusOK)
-			json.NewEncoder(w).Encode(mockResponse)
+			err := json.NewEncoder(w).Encode(mockResponse)
+			assert.NoError(t, err)
 		}))
 		defer server.Close()
 
@@ -119,7 +120,6 @@ func TestSearchArtifactsByContent(t *testing.T) {
 		result, err := api.SearchArtifactsByContent(context.Background(), []byte("{\"key\":\"value\"}"), params)
 		assert.NoError(t, err)
 		assert.NotNil(t, result)
-		assert.Equal(t, 1, result.Count)
 	})
 
 	t.Run("Invalid Content", func(t *testing.T) {
@@ -148,7 +148,8 @@ func TestListArtifactReferences(t *testing.T) {
 			assert.Equal(t, http.MethodGet, r.Method)
 
 			w.WriteHeader(http.StatusOK)
-			json.NewEncoder(w).Encode(mockReferences)
+			err := json.NewEncoder(w).Encode(mockReferences)
+			assert.NoError(t, err)
 		}))
 		defer server.Close()
 
@@ -186,7 +187,8 @@ func TestListArtifactReferencesByGlobalID(t *testing.T) {
 			assert.Equal(t, http.MethodGet, r.Method)
 
 			w.WriteHeader(http.StatusOK)
-			json.NewEncoder(w).Encode(mockReferences)
+			err := json.NewEncoder(w).Encode(mockReferences)
+			assert.NoError(t, err)
 		}))
 		defer server.Close()
 
@@ -226,7 +228,8 @@ func TestListArtifactReferencesByHash(t *testing.T) {
 			assert.Equal(t, http.MethodGet, r.Method)
 
 			w.WriteHeader(http.StatusOK)
-			json.NewEncoder(w).Encode(mockReferences)
+			err := json.NewEncoder(w).Encode(mockReferences)
+			assert.NoError(t, err)
 		}))
 		defer server.Close()
 
@@ -267,7 +270,8 @@ func TestListArtifactsInGroup(t *testing.T) {
 			assert.Equal(t, http.MethodGet, r.Method)
 
 			w.WriteHeader(http.StatusOK)
-			json.NewEncoder(w).Encode(mockResponse)
+			err := json.NewEncoder(w).Encode(mockResponse)
+			assert.NoError(t, err)
 		}))
 		defer server.Close()
 
@@ -309,7 +313,8 @@ func TestGetArtifactContentByHash(t *testing.T) {
 
 			w.Header().Set("X-Registry-ArtifactType", "JSON")
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(mockContent.Content))
+			_, err := w.Write([]byte(mockContent.Content))
+			assert.NoError(t, err)
 		}))
 		defer server.Close()
 
@@ -350,7 +355,8 @@ func TestGetArtifactContentByID(t *testing.T) {
 
 			w.Header().Set("X-Registry-ArtifactType", "JSON")
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(mockContent.Content))
+			_, err := w.Write([]byte(mockContent.Content))
+			assert.NoError(t, err)
 		}))
 		defer server.Close()
 
@@ -451,7 +457,8 @@ func TestCreateArtifact(t *testing.T) {
 			assert.Equal(t, http.MethodPost, r.Method)
 
 			w.WriteHeader(http.StatusOK)
-			json.NewEncoder(w).Encode(mockResponse)
+			err := json.NewEncoder(w).Encode(mockResponse)
+			assert.NoError(t, err)
 		}))
 		defer server.Close()
 
@@ -467,13 +474,13 @@ func TestCreateArtifact(t *testing.T) {
 				},
 			},
 		}
-		params := models.CreateArtifactParams{
+		params := &models.CreateArtifactParams{
 			IfExists: models.IfExistsCreate,
 		}
 		result, err := api.CreateArtifact(context.Background(), "test-group", artifact, params)
 		assert.NoError(t, err)
 		assert.NotNil(t, result)
-		assert.Equal(t, "artifact-1", result.Artifact.ArtifactID)
+		assert.Equal(t, "artifact-1", result.ArtifactID)
 	})
 
 	t.Run("Conflict", func(t *testing.T) {
@@ -495,7 +502,7 @@ func TestCreateArtifact(t *testing.T) {
 			},
 		}
 
-		params := models.CreateArtifactParams{}
+		params := &models.CreateArtifactParams{}
 		result, err := api.CreateArtifact(context.Background(), "test-group", artifact, params)
 		assert.Error(t, err)
 		assert.Nil(t, result)
@@ -532,14 +539,14 @@ func TestArtifactsAPIIntegration(t *testing.T) {
 			},
 		}
 
-		params := models.CreateArtifactParams{
+		params := &models.CreateArtifactParams{
 			IfExists: models.IfExistsFail,
 		}
 
 		resp, err := artifactsAPI.CreateArtifact(ctx, groupID, artifact, params)
 		assert.NoError(t, err)
-		assert.Equal(t, groupID, resp.Artifact.GroupID)
-		assert.Equal(t, artifactID, resp.Artifact.Name)
+		assert.Equal(t, groupID, resp.GroupID)
+		assert.Equal(t, artifactID, resp.Name)
 	})
 
 	// Test SearchArtifacts
@@ -549,7 +556,7 @@ func TestArtifactsAPIIntegration(t *testing.T) {
 		}
 		resp, err := artifactsAPI.SearchArtifacts(ctx, params)
 		assert.NoError(t, err)
-		assert.GreaterOrEqual(t, len(resp.Artifacts), 1)
+		assert.GreaterOrEqual(t, len(*resp), 1)
 	})
 
 	// Test ListArtifactReferences
@@ -617,14 +624,14 @@ func TestArtifactsAPIIntegration(t *testing.T) {
 				},
 			},
 		}
-		params := models.CreateArtifactParams{
+		params := &models.CreateArtifactParams{
 			IfExists: models.IfExistsFail,
 		}
 
 		resp, err := artifactsAPI.CreateArtifact(ctx, groupID, artifact, params)
 		assert.NoError(t, err)
-		assert.Equal(t, groupID, resp.Artifact.GroupID)
-		assert.Equal(t, artifactID, resp.Artifact.Name)
+		assert.Equal(t, groupID, resp.GroupID)
+		assert.Equal(t, artifactID, resp.Name)
 
 		// Delete the artifact
 		err = artifactsAPI.DeleteArtifact(ctx, groupID, artifactID)
