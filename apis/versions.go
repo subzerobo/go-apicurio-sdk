@@ -349,21 +349,13 @@ func (api *VersionsAPI) GetArtifactVersionContent(
 		return nil, err
 	}
 
-	fmt.Println(resp)
 	content, err := handleRawResponse(resp, http.StatusOK)
 	if err != nil {
 		return nil, err
 	}
 
-	// Parse artifact type header
-	artifactType, err := parseArtifactTypeHeader(resp)
-	if err != nil {
-		return nil, err
-	}
-
 	return &models.ArtifactContent{
-		Content:      content,
-		ArtifactType: artifactType,
+		Content: content,
 	}, nil
 }
 
