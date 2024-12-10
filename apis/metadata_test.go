@@ -37,7 +37,8 @@ func TestGetArtifactVersionMetadata(t *testing.T) {
 			assert.Equal(t, http.MethodGet, r.Method)
 
 			w.WriteHeader(http.StatusOK)
-			json.NewEncoder(w).Encode(mockMetadata)
+			err := json.NewEncoder(w).Encode(mockMetadata)
+			assert.NoError(t, err)
 		}))
 		defer server.Close()
 
@@ -124,7 +125,8 @@ func TestGetArtifactMetadata(t *testing.T) {
 			assert.Equal(t, http.MethodGet, r.Method)
 
 			w.WriteHeader(http.StatusOK)
-			json.NewEncoder(w).Encode(mockMetadata)
+			err := json.NewEncoder(w).Encode(mockMetadata)
+			assert.NoError(t, err)
 		}))
 		defer server.Close()
 
@@ -227,7 +229,7 @@ func TestMetadataAPIIntegration(t *testing.T) {
 			},
 		},
 	}
-	createParams := models.CreateArtifactParams{
+	createParams := &models.CreateArtifactParams{
 		IfExists: models.IfExistsFail,
 	}
 	_, err := artifactsAPI.CreateArtifact(ctx, groupID, artifact, createParams)
