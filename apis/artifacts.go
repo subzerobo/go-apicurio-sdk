@@ -304,6 +304,105 @@ func (api *ArtifactsAPI) CreateArtifact(ctx context.Context, groupId string, art
 	return &response.Artifact, nil
 }
 
+// ListArtifactRules lists all artifact rules for a given artifact.
+// See: https://www.apicur.io/registry/docs/apicurio-registry/3.0.x/assets-attachments/registry-rest-api.htm#tag/Artifact-rules/operation/createArtifactRule
+func (api *ArtifactsAPI) ListArtifactRules(ctx context.Context, groupID, artifactId string) ([]models.Rule, error) {
+	url := fmt.Sprintf("%s/groups/%s/artifacts/%s/rules", api.Client.BaseURL, groupID, artifactId)
+	resp, err := api.executeRequest(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	var rules []models.Rule
+	if err := handleResponse(resp, http.StatusOK, &rules); err != nil {
+		return nil, err
+	}
+
+	return rules, nil
+}
+
+// CreateArtifactRule creates a new artifact rule for a given artifact.
+// See: https://www.apicur.io/registry/docs/apicurio-registry/3.0.x/assets-attachments/registry-rest-api.htm#tag/Artifact-rules/operation/createArtifactRule
+func (api *ArtifactsAPI) CreateArtifactRule(ctx context.Context, groupID, artifactId string, rule models.Rule, level models.RuleLevel) error {
+	url := fmt.Sprintf("%s/groups/%s/artifacts/%s/rules", api.Client.BaseURL, groupID, artifactId)
+
+	// Prepare the request body
+	body := models.CreateUpdateGlobalRuleRequest{
+		RuleType: rule,
+		Config:   level,
+	}
+	resp, err := api.executeRequest(ctx, http.MethodPost, url, body)
+	if err != nil {
+		return err
+	}
+
+	return handleResponse(resp, http.StatusNoContent, nil)
+}
+
+// DeleteAllArtifactRule deletes all artifact rules for a given artifact.
+// See: https://www.apicur.io/registry/docs/apicurio-registry/3.0.x/assets-attachments/registry-rest-api.htm#tag/Artifact-rules/operation/deleteArtifactRules
+func (api *ArtifactsAPI) DeleteAllArtifactRule(ctx context.Context, groupID, artifactId string) error {
+	url := fmt.Sprintf("%s/groups/%s/artifacts/%s/rules", api.Client.BaseURL, groupID, artifactId)
+	resp, err := api.executeRequest(ctx, http.MethodDelete, url, nil)
+	if err != nil {
+		return err
+	}
+
+	return handleResponse(resp, http.StatusNoContent, nil)
+}
+
+// GetArtifactRule gets the rule level for a given artifact rule.
+// See: https://www.apicur.io/registry/docs/apicurio-registry/3.0.x/assets-attachments/registry-rest-api.htm#tag/Artifact-rules/operation/getArtifactRuleConfig
+func (api *ArtifactsAPI) GetArtifactRule(ctx context.Context, groupID, artifactId string, rule models.Rule) (models.RuleLevel, error) {
+	url := fmt.Sprintf("%s/groups/%s/artifacts/%s/rules/%s", api.Client.BaseURL, groupID, artifactId, rule)
+	resp, err := api.executeRequest(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return "", err
+	}
+
+	var globalRule models.GlobalRuleResponse
+	if err := handleResponse(resp, http.StatusOK, &globalRule); err != nil {
+		return "", err
+	}
+
+	return globalRule.Config, nil
+}
+
+// UpdateArtifactRule updates the rule level for a given artifact rule.
+// See: https://www.apicur.io/registry/docs/apicurio-registry/3.0.x/assets-attachments/registry-rest-api.htm#tag/Artifact-rules/operation/updateArtifactRuleConfig
+func (api *ArtifactsAPI) UpdateArtifactRule(ctx context.Context, groupID, artifactId string, rule models.Rule, level models.RuleLevel) error {
+	url := fmt.Sprintf("%s/groups/%s/artifacts/%s/rules/%s", api.Client.BaseURL, groupID, artifactId, rule)
+
+	// Prepare the request body
+	body := models.CreateUpdateGlobalRuleRequest{
+		RuleType: rule,
+		Config:   level,
+	}
+	resp, err := api.executeRequest(ctx, http.MethodPut, url, body)
+	if err != nil {
+		return err
+	}
+
+	var globalRule models.GlobalRuleResponse
+	if err := handleResponse(resp, http.StatusOK, &globalRule); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// DeleteArtifactRule deletes a specific artifact rule for a given artifact.
+// See: https://www.apicur.io/registry/docs/apicurio-registry/3.0.x/assets-attachments/registry-rest-api.htm#tag/Artifact-rules/operation/deleteArtifactRule
+func (api *ArtifactsAPI) DeleteArtifactRule(ctx context.Context, groupID, artifactId string, rule models.Rule) error {
+	url := fmt.Sprintf("%s/groups/%s/artifacts/%s/rules/%s", api.Client.BaseURL, groupID, artifactId, rule)
+	resp, err := api.executeRequest(ctx, http.MethodDelete, url, nil)
+	if err != nil {
+		return err
+	}
+
+	return handleResponse(resp, http.StatusNoContent, nil)
+}
+
 // executeRequest handles the creation and execution of an HTTP request.
 func (api *ArtifactsAPI) executeRequest(ctx context.Context, method, url string, body interface{}) (*http.Response, error) {
 	var reqBody []byte
