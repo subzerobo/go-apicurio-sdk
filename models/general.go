@@ -97,3 +97,34 @@ func ParseArtifactType(artifactType string) (ArtifactType, error) {
 		return "", ErrUnknownArtifactType
 	}
 }
+
+type Rule string
+
+const (
+	RuleValidity      Rule = "VALIDITY"
+	RuleCompatibility Rule = "COMPATIBILITY"
+	RuleIntegrity     Rule = "INTEGRITY"
+)
+
+// RuleLevel represents the level of different rules for VALIDITY, COMPATIBILITY, and INTEGRITY.
+type RuleLevel string
+
+const (
+	IntegrityLevelNone          RuleLevel = "NONE"
+	IntegrityLevelRefsExist     RuleLevel = "REFS_EXIST"
+	IntegrityLevelAllRefsMapped RuleLevel = "ALL_REFS_MAPPED"
+	IntegrityLevelNoDuplicates  RuleLevel = "NO_DUPLICATES"
+	IntegrityLevelFull          RuleLevel = "FULL"
+
+	CompatibilityLevelBackward           RuleLevel = "BACKWARD"
+	CompatibilityLevelBackwardTransitive RuleLevel = "BACKWARD_TRANSITIVE"
+	CompatibilityLevelForward            RuleLevel = "FORWARD"
+	CompatibilityLevelForwardTransitive  RuleLevel = "FORWARD_TRANSITIVE"
+	CompatibilityLevelFull               RuleLevel = "FULL"
+	CompatibilityLevelFullTransitive     RuleLevel = "FULL_TRANSITIVE"
+	CompatibilityLevelNone               RuleLevel = "NONE"
+
+	ValidityLevelNone       RuleLevel = "NONE"
+	ValidityLevelSyntaxOnly RuleLevel = "SYNTAX_ONLY"
+	ValidityLevelFull       RuleLevel = "FULL"
+)

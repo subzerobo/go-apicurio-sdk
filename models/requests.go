@@ -43,3 +43,8 @@ type UpdateArtifactMetadataRequest struct {
 type StateRequest struct {
 	State State `json:"state"`
 }
+
+type CreateUpdateGlobalRuleRequest struct {
+	RuleType Rule      `json:"ruleType"`
+	Config   RuleLevel `json:"config"`
+}

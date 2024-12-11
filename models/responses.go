@@ -30,3 +30,8 @@ type ArtifactVersionListResponse struct {
 type StateResponse struct {
 	State State `json:"state"`
 }
+
+type GlobalRuleResponse struct {
+	RuleType Rule      `json:"ruleType"`
+	Config   RuleLevel `json:"config"`
+}
